@@ -14,83 +14,7 @@ import json
 import random
 from pathlib import Path
 
-VERSAO = "v1.0"
-AVISO = "Apoio à decisão clínica: a conduta final deve ser validada pelo médico responsável."
-
-PROTOCOLOS = [
-    {
-        "id": "HSF-PROT-001", "nome": "sepse",
-        "indicacao": "Suspeita de infecção associada a disfunção orgânica (ex.: hipotensão, rebaixamento de consciência, oligúria).",
-        "exames": ["Lactato", "Hemoculturas antes do antibiótico", "Hemograma", "Creatinina e ureia", "Gasometria"],
-        "conduta": [
-            "Reconhecer precocemente e classificar gravidade (qSOFA/SOFA).",
-            "Coletar lactato e hemoculturas antes de iniciar o antibiótico.",
-            "Iniciar antibiótico de amplo espectro na primeira hora, conforme protocolo de antimicrobianos vigente.",
-            "Ressuscitação volêmica conforme protocolo e reavaliação frequente da perfusão.",
-        ],
-        "alertas": ["Hipotensão persistente após reposição volêmica", "Lactato elevado", "Rebaixamento do nível de consciência"],
-    },
-    {
-        "id": "HSF-PROT-002", "nome": "dor torácica / síndrome coronariana aguda",
-        "indicacao": "Paciente com dor torácica sugestiva de origem isquêmica.",
-        "exames": ["ECG de 12 derivações em até 10 minutos", "Troponina seriada", "Radiografia de tórax", "Eletrólitos"],
-        "conduta": [
-            "Realizar ECG em até 10 minutos da chegada e monitorizar o paciente.",
-            "Solicitar troponina seriada conforme protocolo.",
-            "Avaliar antiagregação plaquetária conforme protocolo, checando contraindicações.",
-            "Acionar a cardiologia para estratificação de risco.",
-        ],
-        "alertas": ["Supradesnivelamento do segmento ST", "Instabilidade hemodinâmica", "Arritmia sustentada"],
-    },
-    {
-        "id": "HSF-PROT-003", "nome": "AVC agudo",
-        "indicacao": "Déficit neurológico focal de início súbito.",
-        "exames": ["Glicemia capilar", "TC de crânio sem contraste", "ECG", "Coagulograma"],
-        "conduta": [
-            "Registrar o horário de início dos sintomas (ou o último momento visto bem).",
-            "Aplicar a escala NIHSS e medir a glicemia capilar.",
-            "Realizar TC de crânio sem contraste imediatamente.",
-            "Acionar a neurologia para avaliar elegibilidade a terapias de reperfusão dentro da janela.",
-        ],
-        "alertas": ["Janela terapêutica próxima do limite", "Piora neurológica", "Pressão arterial muito elevada"],
-    },
-    {
-        "id": "HSF-PROT-004", "nome": "cetoacidose diabética",
-        "indicacao": "Paciente diabético com hiperglicemia, cetonemia/cetonúria e acidose metabólica.",
-        "exames": ["Glicemia", "Gasometria", "Cetonas", "Eletrólitos (incluindo potássio)", "Função renal"],
-        "conduta": [
-            "Confirmar o diagnóstico com glicemia, gasometria e cetonas.",
-            "Dosar o potássio antes de iniciar insulina.",
-            "Hidratação venosa conforme protocolo.",
-            "Insulinoterapia conforme protocolo e monitorização horária de glicemia e eletrólitos.",
-        ],
-        "alertas": ["Potássio baixo antes da insulina", "Rebaixamento de consciência", "Acidose grave"],
-    },
-    {
-        "id": "HSF-PROT-005", "nome": "pneumonia adquirida na comunidade",
-        "indicacao": "Quadro respiratório agudo com infiltrado pulmonar novo em paciente da comunidade.",
-        "exames": ["Radiografia de tórax", "Oximetria", "Hemograma", "Ureia", "Hemocultura se grave"],
-        "conduta": [
-            "Avaliar gravidade com CURB-65 e oximetria.",
-            "Confirmar com radiografia de tórax.",
-            "Iniciar antibiótico conforme protocolo de antimicrobianos vigente.",
-            "Definir local de tratamento (ambulatorial, enfermaria ou UTI) pelos critérios de internação.",
-        ],
-        "alertas": ["Saturação de O2 baixa", "Confusão mental", "Frequência respiratória elevada"],
-    },
-    {
-        "id": "HSF-PROT-006", "nome": "crise hipertensiva",
-        "indicacao": "Pressão arterial muito elevada, com ou sem sintomas.",
-        "exames": ["Creatinina", "Eletrólitos", "ECG", "Urina tipo 1", "Troponina se dor torácica"],
-        "conduta": [
-            "Diferenciar urgência de emergência hipertensiva pela presença de lesão de órgão-alvo.",
-            "Investigar sinais de lesão aguda em coração, cérebro e rins.",
-            "Reduzir a pressão de forma controlada, evitando queda abrupta.",
-            "Na emergência hipertensiva, monitorizar e acionar a equipe de cuidados intensivos.",
-        ],
-        "alertas": ["Dor torácica", "Déficit neurológico", "Alteração visual ou confusão"],
-    },
-]
+from src.domain.protocolos import VERSAO, AVISO, PROTOCOLOS
 
 PERGUNTAS = {
     "conduta": ["Qual a conduta inicial em {n}?", "Como devo proceder no atendimento inicial de {n}?", "Quais são os passos iniciais do protocolo de {n}?"],
@@ -99,7 +23,12 @@ PERGUNTAS = {
     "indicacao": ["Quando o protocolo de {n} se aplica?", "Em que situação devo seguir o protocolo de {n}?", "Qual a indicação do protocolo de {n}?"],
 }
 
-NOMES = ["Ana", "Bruno", "Carla", "Diego", "Eduarda", "Felipe", "Gabriela", "Henrique", "Isabela", "João", "Larissa", "Marcos"]
+NOMES_F = ["Ana", "Carla", "Eduarda", "Gabriela", "Isabela", "Larissa"]
+NOMES_M = ["Bruno", "Diego", "Felipe", "Henrique", "João", "Marcos"]
+NOMES = NOMES_F + NOMES_M  # mantido para compatibilidade; prefira nome_por_sexo()
+
+def nome_por_sexo(sexo: str, rng: random.Random) -> str:
+    return rng.choice(NOMES_F if sexo == "feminino" else NOMES_M)
 SOBRENOMES = ["Silva", "Souza", "Oliveira", "Santos", "Pereira", "Costa", "Almeida", "Ribeiro", "Carvalho", "Ferreira"]
 
 QUEIXAS = {
@@ -273,8 +202,8 @@ def gerar_notas_clinicas(n: int, rng: random.Random) -> list[dict]:
         p = rng.choice(PROTOCOLOS)
         queixa, pool = QUEIXAS[p["id"]]
         pend = rng.sample(pool, 2)
-        nome = f"{rng.choice(NOMES)} {rng.choice(SOBRENOMES)} {rng.choice(SOBRENOMES)}"
         sexo = rng.choice(["feminino", "masculino"])
+        nome = f"{nome_por_sexo(sexo, rng)} {rng.choice(SOBRENOMES)} {rng.choice(SOBRENOMES)}"
         idade, comorb = rng.randint(18, 89), rng.choice(COMORBIDADES)
         pa, fc = f"{rng.randint(70, 200)}x{rng.randint(40, 120)}", rng.randint(55, 140)
         nota = (

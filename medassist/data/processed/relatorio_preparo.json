@@ -1,0 +1,27 @@
+{
+  "entrada": 213,
+  "descartados_vazios": 0,
+  "descartados_tamanho": 0,
+  "descartados_duplicados": 0,
+  "descartados_pii_residual": 0,
+  "pii_substituida": {
+    "CPF": 60,
+    "PRONTUARIO": 60,
+    "TELEFONE": 60,
+    "DATA": 60,
+    "NOME": 60
+  },
+  "saida": 213,
+  "divisao": {
+    "train": 169,
+    "val": 22,
+    "test": 22
+  },
+  "tipos": {
+    "faq_protocolo": 72,
+    "modelo_documento": 3,
+    "procedimento_interno": 1,
+    "seguranca_recusa": 77,
+    "resumo_nota": 60
+  }
+}
