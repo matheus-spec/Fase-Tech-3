@@ -1,0 +1,14 @@
+# Etapas 1, 3 e 4 (orquestração): rodam numa máquina comum, sem GPU.
+#   pip install -r requirements.txt
+langchain-core>=0.3
+
+# Etapa 2 (fine-tuning) e a parte do pipeline que chama o modelo de verdade:
+# só é preciso no Colab (ou outra máquina com GPU). Já vêm pré-instaladas boa
+# parte das vezes no Colab; o notebook roda `!pip install` sozinho.
+# transformers>=4.44
+# accelerate
+# peft
+# trl
+# bitsandbytes
+# datasets
+# sentencepiece

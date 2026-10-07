@@ -19,7 +19,7 @@ from src.rag.retriever import BuscadorProtocolos, montar_resposta, protocolo_par
 _POR_ID = {p["id"]: p for p in PROTOCOLOS}
 
 
-def _linha_paciente(p: Paciente, pendentes: list[sqlite3.Row]) -> str:
+def linha_paciente(p: Paciente, pendentes: list[sqlite3.Row]) -> str:
     nomes_pendentes = [e["nome"] for e in pendentes]
     protocolo = _POR_ID.get(p.protocolo_id, {}).get("nome", p.protocolo_id)
     pendencia = f"Exames pendentes: {', '.join(nomes_pendentes)}." if nomes_pendentes else "Sem exames pendentes registrados."
@@ -58,7 +58,7 @@ def responder_com_contexto(
         texto = resposta_protocolo
     else:
         pendentes = exames_pendentes(con, paciente.id)
-        contexto = _linha_paciente(paciente, pendentes)
+        contexto = linha_paciente(paciente, pendentes)
         texto = f"{contexto}\n\n{resposta_protocolo}"
 
     registrar_evento_auditoria(con, tipo="consulta_protocolo", conteudo=f"pergunta={pergunta!r} leito={codigo_leito!r}", origem="assistente")

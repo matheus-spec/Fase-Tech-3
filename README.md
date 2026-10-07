@@ -7,7 +7,7 @@ Todos os dados do repositório são **sintéticos e didáticos**; não use em at
 - [x] Etapa 1 – Dados: geração sintética, anonimização, curadoria e divisão
 - [x] Etapa 2 – Fine-tuning (notebook Colab pronto, aguardando execução)
 - [x] Etapa 3 – Base de prontuários (SQLite) e RAG com citação de fonte
-- [ ] Etapa 4 – Pipeline LangChain
+- [x] Etapa 4 – Pipeline LangChain (testado localmente com stub; falta ligar ao modelo real no Colab)
 - [ ] Etapa 5 – Fluxos LangGraph com validação humana
 - [ ] Etapa 6 – Guardrails e logging de auditoria
 - [ ] Etapa 7 – Relatório técnico, diagrama e roteiro do vídeo
@@ -54,15 +54,53 @@ python -m src.db.prontuarios --db data/processed/prontuarios.db --pacientes 20
 python -m unittest discover -s tests -t .
 ```
 
+## Etapa 4 – Pipeline (LangChain)
+
+Une as três etapas anteriores numa única classe, `AssistenteMedico` (`src/chains/pipeline.py`):
+
+1. **Guardrail** (`src/guardrails/seguranca.py`) — bloqueio por regra, não por IA. Se a
+   pergunta pedir prescrição, dose, assinatura, alta ou "ignore o protocolo", a resposta
+   sai daqui e **o LLM nunca é chamado**.
+2. **Leito** (se informado) — busca o paciente no prontuário (Etapa 3). Leito inexistente
+   também encerra aqui, sem chamar o LLM.
+3. **Busca do protocolo** (Etapa 3) — por palavra-chave, com fallback para o protocolo do
+   paciente se a pergunta não citar a doença.
+4. **LLM** (Etapa 2) — só compõe o texto a partir do contexto já verificado.
+5. **Correção de citação** — depois do LLM responder, a linha `Fonte: ...` é
+   **substituída** pela fonte real da busca, nunca pela que o LLM escreveu. É assim que o
+   problema da Etapa 2 (71% de código de protocolo errado) fica resolvido na arquitetura,
+   em vez de depender do fine-tuning acertar sozinho.
+6. **Auditoria** — toda consulta é registrada (`eventos_auditoria`).
+
+```bash
+pip install -r requirements.txt       # só langchain-core; nada de GPU aqui
+python -m src.chains.demo_cli --leito leito-1   # demonstração com um stub no lugar do LLM
+python -m unittest discover -s tests -t .
+```
+
+`src/chains/llm_cliente.py` define a interface `GeradorResposta` (só precisa de um método
+`.gerar(prompt) -> str`), com duas implementações: `ModeloEco` (stub determinístico, usado
+nos testes e no `demo_cli`, sem precisar de GPU) e `HuggingFaceGerador` (usa o `model` e o
+`tokenizer` já carregados no notebook da Etapa 2, dentro do Colab). O pipeline não muda
+nada ao trocar uma pela outra.
+
+O arquivo usa `langchain_core` quando instalado (`pip install -r requirements.txt`) e,
+caso contrário, uma implementação mínima com a mesma interface (`PromptTemplate`,
+`RunnableLambda`, operador `|`) — isso permite testar a lógica do pipeline sem depender de
+instalar a biblioteca, sem mudar o comportamento quando ela está instalada de verdade.
+
 ## Estrutura
 ```
-src/domain/          protocolos.py (catálogo único, usado pela Etapa 1 e pela Etapa 3)
+src/domain/          protocolos.py (catálogo único, usado pelas Etapas 1, 3 e 4)
 src/preprocessing/   anonymizer.py, synthetic_data.py, build_dataset.py
 src/finetuning/      prompt_format.py (template único treino/inferência), evaluate.py
 src/db/              prontuarios.py (SQLite sintético: pacientes, exames, auditoria)
 src/rag/             retriever.py (busca com citação garantida), contexto.py
+src/guardrails/      seguranca.py (bloqueio por regra, antes do LLM)
+src/chains/          pipeline.py (AssistenteMedico), llm_cliente.py, demo_cli.py
 notebooks/           MedAssist_Finetuning_Etapa2.ipynb
-tests/               testes unitários (32, cobrindo as 3 etapas)
+tests/               testes unitários (45, cobrindo as 4 etapas)
 data/raw|processed/  dados brutos sintéticos e dataset final
 docs/                relatório técnico (etapa 7) e avaliação da etapa 2
+requirements.txt     dependências locais (langchain-core) e as do Colab (comentadas)
 ```
