@@ -42,6 +42,12 @@ class HuggingFaceGerador(GeradorResposta):
     só é instanciada dentro do notebook do Colab, onde essas bibliotecas já
     estão carregadas; numa máquina sem GPU, o resto do pipeline funciona sem
     precisar instalá-las.
+
+    Aplica o MESMO chat template (sistema + usuário) usado no treino da Etapa 2
+    (src/finetuning/prompt_format.py) antes de gerar. Sem isso, o texto recebido
+    do pipeline (que é só o "conteúdo", sem a estrutura de conversa) chega ao
+    modelo num formato diferente do que ele foi ajustado para reconhecer, e a
+    qualidade da resposta cai — foi o que se observou ao testar no Colab.
     """
 
     def __init__(self, model, tokenizer, max_new_tokens: int = 300):
@@ -50,7 +56,16 @@ class HuggingFaceGerador(GeradorResposta):
         self.max_new_tokens = max_new_tokens
 
     def gerar(self, prompt: str) -> str:
-        ids = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
+        from src.finetuning.prompt_format import SYSTEM_PROMPT
+
+        mensagens = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ]
+        texto_formatado = self.tokenizer.apply_chat_template(
+            mensagens, tokenize=False, add_generation_prompt=True,
+        )
+        ids = self.tokenizer(texto_formatado, return_tensors="pt").to(self.model.device)
         saida = self.model.generate(
             **ids, max_new_tokens=self.max_new_tokens, do_sample=False, use_cache=True,
         )

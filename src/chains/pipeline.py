@@ -11,10 +11,10 @@ Ordem das etapas, cada uma podendo encerrar o pipeline antes do LLM:
   3. Busca do protocolo (Etapa 3) — por palavra-chave na pergunta, com
      fallback para o protocolo já associado ao paciente.
   4. LLM (Etapa 2) — só compõe o texto, a partir do contexto já verificado.
-  5. Correção de citação — depois que o LLM responde, a linha "Fonte: ..."
-     é SUBSTITUÍDA pela fonte real da busca (passo 3), não pela que o LLM
-     escreveu. Resolve o problema medido na Etapa 2 (71% de código errado)
-     na arquitetura, não esperando que o fine-tuning acerte sozinho.
+  5. Correção de citação — depois que o LLM responde, TODA citação que ele
+     escreveu é removida e substituída pela fonte real da busca (passo 3).
+     Resolve o problema medido na Etapa 2 (71% de código errado) na
+     arquitetura, não esperando que o fine-tuning acerte sozinho.
   6. Auditoria — toda consulta é registrada (src/db/prontuarios.py).
 
 Implementado com LangChain (PromptTemplate + RunnableLambda em LCEL) para
@@ -76,22 +76,26 @@ from src.chains.llm_cliente import GeradorResposta
 from src.guardrails.seguranca import verificar
 from src.db.prontuarios import Paciente, buscar_paciente_por_leito, exames_pendentes, registrar_evento_auditoria
 from src.domain.protocolos import AVISO, PROTOCOLOS
-from src.finetuning.prompt_format import SYSTEM_PROMPT
 from src.rag.contexto import linha_paciente
 from src.rag.retriever import BuscadorProtocolos, ResultadoBusca, protocolo_para_resultado
 
 _POR_ID = {p["id"]: p for p in PROTOCOLOS}
-_RE_FONTE_LINHA = re.compile(r"^Fonte:.*$", re.MULTILINE)
 
+# Qualquer trecho "Fonte: ... ." é removido do texto do LLM antes de responder —
+# não só o errado: mesmo um acerto por sorte é indistinguível de um palpite para
+# quem lê, então a única citação confiável é a acrescentada por _corrigir_citacao.
+_RE_FONTE_INLINE = re.compile(r"\s*Fonte:[^.\n]*\.?", re.IGNORECASE)
+
+# NÃO inclui {system_prompt} aqui: o papel do assistente e as regras de segurança
+# já são aplicados pelo GeradorResposta (HuggingFaceGerador usa o mesmo chat
+# template — sistema + usuário — da Etapa 2); aqui só o conteúdo específico
+# desta pergunta (o "turno do usuário").
 _PROMPT = PromptTemplate.from_template(
-    "{system_prompt}\n\n"
     "### CONTEXTO ###\n"
     "{contexto_paciente}"
     "Protocolo interno recuperado:\n{protocolo_texto}\n\n"
     "Pergunta do médico: {pergunta}\n\n"
-    "Responda em português, usando só as informações do contexto acima. "
-    "Termine sempre citando a fonte no formato 'Fonte: <id> <versão> – <nome>.' "
-    "e com o aviso de que a conduta final depende do médico responsável.\n"
+    "Responda em português, usando só as informações do contexto acima.\n"
     "### FIM DO CONTEXTO ###"
 )
 
@@ -124,16 +128,16 @@ def _resolver_protocolo(buscador: BuscadorProtocolos, pergunta: str, paciente: P
 
 
 def _corrigir_citacao(texto: str, fonte: str | None) -> str:
-    """Substitui (ou acrescenta) a linha 'Fonte: ...' pela fonte REAL da busca,
-    não pela que o LLM escreveu — garante a citação independente do que o
-    modelo gerou."""
+    """Remove QUALQUER citação que o LLM tenha escrito (certa, errada ou
+    inventada) e acrescenta a única fonte confiável: a da busca (Etapa 3).
+    Não tenta consertar a citação do modelo — substitui por inteiro, porque
+    uma citação às vezes certa é tão arriscada quanto uma sempre errada: quem
+    lê não tem como saber qual é qual."""
     if fonte is None:
         return texto
-    linha_correta = f"Fonte: {fonte}"
-    if _RE_FONTE_LINHA.search(texto):
-        return _RE_FONTE_LINHA.sub(linha_correta, texto, count=1)
-    separador = "\n\n" if not texto.endswith("\n") else "\n"
-    return f"{texto}{separador}{linha_correta}"
+    limpo = _RE_FONTE_INLINE.sub("", texto).rstrip()
+    separador = "\n\n" if limpo else ""
+    return f"{limpo}{separador}Fonte: {fonte}"
 
 
 def _garantir_aviso(texto: str) -> str:
@@ -182,7 +186,6 @@ class AssistenteMedico:
             contexto_paciente = f"Dados do paciente: {linha_paciente(paciente, pendentes)}\n\n"
 
         bruto = self._chain.invoke({
-            "system_prompt": SYSTEM_PROMPT,
             "contexto_paciente": contexto_paciente,
             "protocolo_texto": _texto_protocolo(resultado.protocolo),
             "pergunta": pergunta,
