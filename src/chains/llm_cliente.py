@@ -18,21 +18,18 @@ class GeradorResposta(Protocol):
 class ModeloEco(GeradorResposta):
     """Stub determinístico para rodar e testar o pipeline sem GPU/modelo.
 
-    Não "inventa" nada: devolve o próprio contexto recebido no prompt,
-    então serve para testar a orquestração (guardrail → busca → prompt →
-    pós-processamento de citação), não a qualidade da escrita — essa parte
-    só pode ser avaliada com o modelo real (Colab), como na Etapa 2.
+    Não tenta simular a escrita do LLM — só confirma que o prompt chegou até
+    aqui — então serve para testar a orquestração (guardrail → busca →
+    prompt → pós-processamento de citação), não a qualidade do texto. Isso é
+    o bastante: a correção de citação e o aviso são adicionados DEPOIS do
+    LLM responder, então os testes que usam este stub continuam verificando
+    a garantia real (a fonte certa, o aviso presente) mesmo sem um texto de
+    resposta "bonito". A qualidade da escrita só se avalia com o modelo real
+    (Colab), como na Etapa 2.
     """
 
-    MARCADOR_CONTEXTO_INICIO = "### CONTEXTO ###"
-    MARCADOR_CONTEXTO_FIM = "### FIM DO CONTEXTO ###"
-
     def gerar(self, prompt: str) -> str:
-        ini = prompt.find(self.MARCADOR_CONTEXTO_INICIO)
-        fim = prompt.find(self.MARCADOR_CONTEXTO_FIM)
-        if ini == -1 or fim == -1:
-            return "Não encontrei um protocolo interno que corresponda a essa pergunta."
-        return prompt[ini + len(self.MARCADOR_CONTEXTO_INICIO):fim].strip()
+        return "Resposta de teste (ModeloEco), sem LLM real envolvido."
 
 
 class HuggingFaceGerador(GeradorResposta):

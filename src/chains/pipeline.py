@@ -84,20 +84,25 @@ _POR_ID = {p["id"]: p for p in PROTOCOLOS}
 # Qualquer trecho "Fonte: ... ." é removido do texto do LLM antes de responder —
 # não só o errado: mesmo um acerto por sorte é indistinguível de um palpite para
 # quem lê, então a única citação confiável é a acrescentada por _corrigir_citacao.
-_RE_FONTE_INLINE = re.compile(r"\s*Fonte:[^.\n]*\.?", re.IGNORECASE)
+# O "(?!\d)" depois do ponto evita parar no "v1.0" (o ponto da versão é seguido
+# de um dígito); só para no ponto final de verdade, no fim da frase.
+_RE_FONTE_INLINE = re.compile(r"\s*Fonte:.*?\.(?!\d)", re.IGNORECASE)
 
 # NÃO inclui {system_prompt} aqui: o papel do assistente e as regras de segurança
 # já são aplicados pelo GeradorResposta (HuggingFaceGerador usa o mesmo chat
-# template — sistema + usuário — da Etapa 2); aqui só o conteúdo específico
-# desta pergunta (o "turno do usuário").
-_PROMPT = PromptTemplate.from_template(
-    "### CONTEXTO ###\n"
-    "{contexto_paciente}"
-    "Protocolo interno recuperado:\n{protocolo_texto}\n\n"
-    "Pergunta do médico: {pergunta}\n\n"
-    "Responda em português, usando só as informações do contexto acima.\n"
-    "### FIM DO CONTEXTO ###"
-)
+# template — sistema + usuário — da Etapa 2); aqui só o conteúdo desta pergunta.
+#
+# Formato deliberadamente simples (pergunta, depois texto corrido de apoio) —
+# o mais perto possível do "instruction\n\ninput" visto no treino (Etapa 1).
+# As perguntas de protocolo (faq_protocolo) foram treinadas SEM nenhum texto de
+# apoio (o modelo aprendeu a responder "de memória"); por isso um prompt com
+# marcações como "### CONTEXTO ###" ou "Pergunta do médico:" — que o modelo
+# nunca viu — é um formato fora da distribuição de treino e piora a resposta,
+# como observado ao testar no Colab (a correção de citação continua garantindo
+# a fonte certa de qualquer forma, mas o texto gerado fica melhor com um
+# prompt mais parecido com o treino). Alinhar de verdade exigiria incluir
+# exemplos com contexto nas Etapas 1 e 2 — ver docs/relatorio (limitações).
+_PROMPT = PromptTemplate.from_template("{pergunta}\n\n{contexto_paciente}{protocolo_texto}")
 
 
 @dataclass
@@ -109,10 +114,13 @@ class RespostaPipeline:
 
 
 def _texto_protocolo(p: dict) -> str:
+    """Texto corrido (não em campos rotulados) — mais perto do que o modelo viu
+    como 'input' nos exemplos de treino que usavam texto de apoio (resumo_nota)."""
     return (
-        f"Nome: {p['nome']}\nIndicação: {p['indicacao']}\n"
-        f"Exames iniciais: {', '.join(p['exames'])}\nConduta: {' '.join(p['conduta'])}\n"
-        f"Sinais de alerta: {', '.join(p['alertas'])}"
+        f"O protocolo interno de {p['nome']} indica: {p['indicacao']} "
+        f"Exames iniciais: {', '.join(p['exames'])}. "
+        f"Conduta: {' '.join(p['conduta'])} "
+        f"Sinais de alerta: {', '.join(p['alertas'])}."
     )
 
 
