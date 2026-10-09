@@ -7,7 +7,7 @@ Todos os dados do repositório são **sintéticos e didáticos**; não use em at
 - [x] Etapa 1 – Dados: geração sintética, anonimização, curadoria e divisão
 - [x] Etapa 2 – Fine-tuning (notebook Colab pronto, aguardando execução)
 - [x] Etapa 3 – Base de prontuários (SQLite) e RAG com citação de fonte
-- [x] Etapa 4 – Pipeline LangChain (testado localmente com stub; falta ligar ao modelo real no Colab)
+- [x] Etapa 4 – Pipeline LangChain (testado com stub local e com o modelo real no Colab)
 - [ ] Etapa 5 – Fluxos LangGraph com validação humana
 - [ ] Etapa 6 – Guardrails e logging de auditoria
 - [ ] Etapa 7 – Relatório técnico, diagrama e roteiro do vídeo

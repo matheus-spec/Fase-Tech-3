@@ -30,7 +30,11 @@ _PARADAS = {
 def _normalizar(texto: str) -> list[str]:
     sem_acento = unicodedata.normalize("NFKD", texto.lower()).encode("ascii", "ignore").decode()
     tokens = re.findall(r"[a-z0-9]+", sem_acento)
-    return [t for t in tokens if t not in _PARADAS and len(t) > 1]
+    # Números puros (leito, idade, dose, minutos...) nunca contam como termo de
+    # busca: "10" no "leito 10" bater com o "10" de "até 10 minutos" num
+    # protocolo é coincidência, não relevância — já causou um falso positivo
+    # real (pergunta sobre comorbidades "encontrando" o protocolo errado).
+    return [t for t in tokens if t not in _PARADAS and len(t) > 1 and not t.isdigit()]
 
 
 def _texto_indexavel(p: dict) -> str:

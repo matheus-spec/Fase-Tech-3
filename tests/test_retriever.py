@@ -48,3 +48,19 @@ class TestBuscadorProtocolos(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestNumerosNaoContamComoRelevancia(unittest.TestCase):
+    """Regressão: 'leito 10' batendo com o '10' de 'até 10 minutos' num protocolo
+    não relacionado já causou uma citação errada em produção (Colab, Etapa 4)."""
+
+    def test_numero_isolado_nao_casa_com_protocolo_por_coincidencia(self):
+        b = BuscadorProtocolos()
+        self.assertEqual(b.buscar("Quais são as comorbidades do paciente do leito 10?"), [])
+        self.assertEqual(b.buscar("Como está o paciente do leito 6 hoje?"), [])
+
+    def test_numero_nao_atrapalha_quando_ha_termo_clinico_real(self):
+        b = BuscadorProtocolos()
+        r = b.buscar("Preciso do protocolo de sepse para o leito 10")
+        self.assertTrue(r)
+        self.assertEqual(r[0].protocolo["id"], "HSF-PROT-001")
