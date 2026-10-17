@@ -8,7 +8,7 @@ Todos os dados do repositório são **sintéticos e didáticos**; não use em at
 - [x] Etapa 2 – Fine-tuning (notebook Colab pronto, aguardando execução)
 - [x] Etapa 3 – Base de prontuários (SQLite) e RAG com citação de fonte
 - [x] Etapa 4 – Pipeline LangChain (testado com stub local e com o modelo real no Colab)
-- [ ] Etapa 5 – Fluxos LangGraph com validação humana
+- [x] Etapa 5 – Fluxos LangGraph com validação humana
 - [ ] Etapa 6 – Guardrails e logging de auditoria
 - [ ] Etapa 7 – Relatório técnico, diagrama e roteiro do vídeo
 
@@ -89,18 +89,44 @@ caso contrário, uma implementação mínima com a mesma interface (`PromptTempl
 `RunnableLambda`, operador `|`) — isso permite testar a lógica do pipeline sem depender de
 instalar a biblioteca, sem mudar o comportamento quando ela está instalada de verdade.
 
+## Etapa 5 – Fluxos automatizados (LangGraph)
+
+Dois fluxos, pedidos no PDF ("verificar exames pendentes, sugerir tratamentos, emitir
+alertas para a equipe"), em `src/graph/fluxo.py`:
+
+1. **`verificar_exames_pendentes_geral`** — automático, roda para todos os pacientes, sem
+   aprovação: é um lembrete operacional (quais exames faltam), não uma decisão clínica.
+2. **`construir_grafo_sugestao` + `decidir_sugestao`** — usa o pipeline da Etapa 4
+   (guardrail + busca com citação garantida + LLM) para sugerir uma conduta por leito,
+   mas o grafo **para** no estado `aguardando_aprovacao`: nenhum alerta é enviado à
+   equipe até um humano decidir (`decidir_sugestao(..., aprovado=True/False, aprovador=...)`).
+   Essa é a exigência do PDF ("nunca sem validação humana") virando um passo real do
+   fluxo — registrado e auditável — não só uma instrução de prompt.
+
+```bash
+python -m src.graph.demo_cli         # demonstração com ModeloEco, sem GPU
+python -m unittest discover -s tests -t .
+```
+
+Como `langgraph` usa a mesma estratégia de *fallback* do `langchain-core` (Etapa 4):
+roda com a biblioteca de verdade quando instalada (`pip install -r requirements.txt`), e
+com uma implementação mínima da mesma interface (`StateGraph`, `add_node`,
+`add_conditional_edges`, `compile().invoke`) quando não — o que permite testar a lógica
+do fluxo sem depender de instalar a biblioteca.
+
 ## Estrutura
 ```
-src/domain/          protocolos.py (catálogo único, usado pelas Etapas 1, 3 e 4)
+src/domain/          protocolos.py (catálogo único, usado pelas Etapas 1, 3, 4 e 5)
 src/preprocessing/   anonymizer.py, synthetic_data.py, build_dataset.py
 src/finetuning/      prompt_format.py (template único treino/inferência), evaluate.py
 src/db/              prontuarios.py (SQLite sintético: pacientes, exames, auditoria)
 src/rag/             retriever.py (busca com citação garantida), contexto.py
 src/guardrails/      seguranca.py (bloqueio por regra, antes do LLM)
 src/chains/          pipeline.py (AssistenteMedico), llm_cliente.py, demo_cli.py
+src/graph/           fluxo.py (LangGraph: exames pendentes + sugestão com aprovação), demo_cli.py
 notebooks/           MedAssist_Finetuning_Etapa2.ipynb
-tests/               testes unitários (45, cobrindo as 4 etapas)
+tests/               testes unitários (56, cobrindo as 5 etapas)
 data/raw|processed/  dados brutos sintéticos e dataset final
-docs/                relatório técnico (etapa 7) e avaliação da etapa 2
-requirements.txt     dependências locais (langchain-core) e as do Colab (comentadas)
+docs/                relatório técnico (etapa 7) e avaliações das etapas 2 e 4
+requirements.txt     dependências locais (langchain-core, langgraph) e as do Colab (comentadas)
 ```

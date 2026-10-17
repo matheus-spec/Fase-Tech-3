@@ -125,6 +125,12 @@ def exames_pendentes(con: sqlite3.Connection, paciente_id: int) -> list[sqlite3.
     ).fetchall()
 
 
+def listar_pacientes(con: sqlite3.Connection) -> list[Paciente]:
+    """Usado pela Etapa 5 (fluxo de verificação geral de exames pendentes)."""
+    linhas = con.execute("SELECT id, codigo_leito, idade, sexo, protocolo_id FROM pacientes ORDER BY codigo_leito").fetchall()
+    return [Paciente(**dict(linha)) for linha in linhas]
+
+
 def registrar_evento_auditoria(
     con: sqlite3.Connection, tipo: str, conteudo: str, origem: str, paciente_id: int | None = None
 ) -> None:
