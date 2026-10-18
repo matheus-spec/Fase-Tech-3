@@ -1,0 +1,72 @@
+[
+  {
+    "tipo": "lembrete_exame_pendente",
+    "conteudo": "leito='leito-12' exames=['Ureia']",
+    "origem": "assistente"
+  },
+  {
+    "tipo": "lembrete_exame_pendente",
+    "conteudo": "leito='leito-13' exames=['Hemograma', 'Oximetria']",
+    "origem": "assistente"
+  },
+  {
+    "tipo": "lembrete_exame_pendente",
+    "conteudo": "leito='leito-14' exames=['Função renal']",
+    "origem": "assistente"
+  },
+  {
+    "tipo": "lembrete_exame_pendente",
+    "conteudo": "leito='leito-15' exames=['Cetonas']",
+    "origem": "assistente"
+  },
+  {
+    "tipo": "lembrete_exame_pendente",
+    "conteudo": "leito='leito-2' exames=['Creatinina e ureia']",
+    "origem": "assistente"
+  },
+  {
+    "tipo": "lembrete_exame_pendente",
+    "conteudo": "leito='leito-3' exames=['Hemocultura se grave']",
+    "origem": "assistente"
+  },
+  {
+    "tipo": "lembrete_exame_pendente",
+    "conteudo": "leito='leito-4' exames=['Hemoculturas antes do antibiótico']",
+    "origem": "assistente"
+  },
+  {
+    "tipo": "lembrete_exame_pendente",
+    "conteudo": "leito='leito-7' exames=['Glicemia capilar', 'ECG']",
+    "origem": "assistente"
+  },
+  {
+    "tipo": "lembrete_exame_pendente",
+    "conteudo": "leito='leito-8' exames=['Hemograma']",
+    "origem": "assistente"
+  },
+  {
+    "tipo": "lembrete_exame_pendente",
+    "conteudo": "leito='leito-9' exames=['Eletrólitos (incluindo potássio)', 'Função renal']",
+    "origem": "assistente"
+  },
+  {
+    "tipo": "consulta_protocolo",
+    "conteudo": "pergunta='Qual a conduta inicial?' leito='leito-1' fonte='HSF-PROT-003 v1.0 – Protocolo interno de AVC agudo.'",
+    "origem": "assistente"
+  },
+  {
+    "tipo": "decisao_sugestao:aprovado",
+    "conteudo": "leito='leito-1' aprovador='Dra. Souza (CRM 123)' fonte='HSF-PROT-003 v1.0 – Protocolo interno de AVC agudo.'",
+    "origem": "medico"
+  },
+  {
+    "tipo": "consulta_protocolo",
+    "conteudo": "pergunta='Qual a conduta inicial?' leito='leito-3' fonte='HSF-PROT-005 v1.0 – Protocolo interno de pneumonia adquirida na comunidade.'",
+    "origem": "assistente"
+  },
+  {
+    "tipo": "decisao_sugestao:rejeitado",
+    "conteudo": "leito='leito-3' aprovador='Dr. Lima (CRM 456)' fonte='HSF-PROT-005 v1.0 – Protocolo interno de pneumonia adquirida na comunidade.'",
+    "origem": "medico"
+  }
+]
